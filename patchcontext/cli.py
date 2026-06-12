@@ -33,6 +33,12 @@ def main(argv: list[str] | None = None) -> int:
 def _add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--repo", default=".", help="Repository root. Defaults to current dir.")
     parser.add_argument("--top", type=int, default=12, help="Number of files to include.")
+    parser.add_argument(
+        "--max-file-bytes",
+        type=int,
+        default=200_000,
+        help="Skip files larger than this many bytes while indexing.",
+    )
     parser.add_argument("--format", choices=["md", "json"], default="md", help="Output format.")
     parser.add_argument("--output", "-o", help="Write output to this file instead of stdout.")
 
@@ -64,6 +70,7 @@ def _run_scan(args: argparse.Namespace) -> int:
         diff_text=read_optional_text(args.diff),
         failure_text=read_optional_text(args.failure),
         top=args.top,
+        max_file_bytes=args.max_file_bytes,
         fmt=args.format,
         output=args.output,
     )
@@ -74,6 +81,7 @@ def _run_failure(args: argparse.Namespace) -> int:
         repo=args.repo,
         failure_text=Path(args.log).read_text(encoding="utf-8"),
         top=args.top,
+        max_file_bytes=args.max_file_bytes,
         fmt=args.format,
         output=args.output,
     )
@@ -82,7 +90,14 @@ def _run_failure(args: argparse.Namespace) -> int:
 def _run_diff(args: argparse.Namespace) -> int:
     repo = Path(args.repo)
     diff = _git_diff(repo, args.base)
-    return _emit(repo=repo, diff_text=diff, top=args.top, fmt=args.format, output=args.output)
+    return _emit(
+        repo=repo,
+        diff_text=diff,
+        top=args.top,
+        max_file_bytes=args.max_file_bytes,
+        fmt=args.format,
+        output=args.output,
+    )
 
 
 def _emit(
@@ -92,15 +107,19 @@ def _emit(
     diff_text: str = "",
     failure_text: str = "",
     top: int,
+    max_file_bytes: int,
     fmt: str,
     output: str | None,
 ) -> int:
+    if max_file_bytes <= 0:
+        raise SystemExit("--max-file-bytes must be greater than zero")
     files = rank_files(
         repo,
         issue_text=issue_text,
         diff_text=diff_text,
         failure_text=failure_text,
         top=top,
+        max_file_bytes=max_file_bytes,
     )
     rendered = to_json(files) if fmt == "json" else to_markdown(files)
     if output:
@@ -124,4 +143,3 @@ def _git_diff(repo: Path, base: str) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

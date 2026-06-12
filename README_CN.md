@@ -72,6 +72,12 @@ patchcontext from-failure --repo . pytest.log
 patchcontext from-diff --repo . --base main --format json
 ```
 
+大仓库里可以跳过超大生成文件，避免它们污染排名：
+
+```bash
+patchcontext scan --repo . --issue issue.md --max-file-bytes 100000
+```
+
 ## 输出长什么样
 
 ```markdown
@@ -108,4 +114,3 @@ python -m build
 ## License
 
 MIT
-

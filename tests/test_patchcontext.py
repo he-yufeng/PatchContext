@@ -66,3 +66,33 @@ def test_cli_scan_writes_json(tmp_path):
 
     assert exit_code == 0
     assert json.loads(output.read_text(encoding="utf-8"))[0]["path"] == "core/router.py"
+
+
+def test_cli_respects_max_file_bytes(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "huge_router.py").write_text("route_request\n" * 100, encoding="utf-8")
+    (repo / "small_router.py").write_text("route_request\n", encoding="utf-8")
+    issue = tmp_path / "issue.md"
+    output = tmp_path / "pack.json"
+    issue.write_text("route_request sends API requests to the wrong route", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "scan",
+            "--repo",
+            str(repo),
+            "--issue",
+            str(issue),
+            "--max-file-bytes",
+            "80",
+            "--format",
+            "json",
+            "-o",
+            str(output),
+        ]
+    )
+
+    assert exit_code == 0
+    paths = [item["path"] for item in json.loads(output.read_text(encoding="utf-8"))]
+    assert paths == ["small_router.py"]

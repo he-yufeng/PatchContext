@@ -52,14 +52,14 @@ IMPORT_RE = re.compile(r"""(?:from|import)\s+["'](\.{1,2}/[^"']+)["']""")
 def build_index(repo: str | Path, max_file_bytes: int = 200_000) -> list[FileRecord]:
     root = Path(repo).resolve()
     records: list[FileRecord] = []
-    for path in _iter_text_files(root):
-        text = _read_limited(path, max_file_bytes)
+    for path in _iter_text_files(root, max_file_bytes):
+        text = path.read_text(encoding="utf-8", errors="replace")
         rel = path.relative_to(root).as_posix()
         records.append(FileRecord(path=rel, text=text, imports=_extract_imports(root, path, text)))
     return records
 
 
-def _iter_text_files(root: Path):
+def _iter_text_files(root: Path, max_file_bytes: int):
     for path in root.rglob("*"):
         if not path.is_file():
             continue
@@ -68,12 +68,9 @@ def _iter_text_files(root: Path):
             continue
         if path.suffix.lower() not in TEXT_SUFFIXES:
             continue
+        if path.stat().st_size > max_file_bytes:
+            continue
         yield path
-
-
-def _read_limited(path: Path, max_bytes: int) -> str:
-    data = path.read_bytes()[:max_bytes]
-    return data.decode("utf-8", errors="replace")
 
 
 def _extract_imports(root: Path, path: Path, text: str) -> set[str]:
@@ -117,4 +114,3 @@ def _extract_js_imports(root: Path, path: Path, text: str) -> set[str]:
                 found.add(candidate.relative_to(root).as_posix())
                 break
     return found
-

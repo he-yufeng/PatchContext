@@ -69,6 +69,7 @@ patchcontext from-diff --repo . --base main
 Common options:
 
 - `--top 20`: include more files.
+- `--max-file-bytes 100000`: skip huge generated or vendored files while indexing.
 - `--format json`: machine-readable output.
 - `--output context.md`: write to a file.
 
@@ -96,4 +97,3 @@ python -m build
 ## License
 
 MIT
-
