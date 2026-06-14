@@ -38,6 +38,7 @@ def rank_files(
             reasons[record.path] = file_reasons
 
     _apply_import_boost(by_path, scores, reasons)
+    _apply_test_sibling_boost(by_path, scores, reasons)
 
     ranked = [
         RankedFile(path=path, score=round(score, 2), reasons=_dedupe(reasons.get(path, [])))
@@ -94,6 +95,35 @@ def _apply_import_boost(
                 reasons.setdefault(importer, []).append(f"imports {path}")
 
 
+def _apply_test_sibling_boost(
+    records: dict[str, FileRecord],
+    scores: dict[str, float],
+    reasons: dict[str, list[str]],
+) -> None:
+    initial = dict(scores)
+    for source_path, source_score in initial.items():
+        if _looks_like_test(source_path):
+            continue
+        stem = Path(source_path).stem.lower()
+        if not stem:
+            continue
+        for candidate in records:
+            if not _looks_like_test(candidate):
+                continue
+            candidate_stem = Path(candidate).stem.lower()
+            if stem in candidate_stem or candidate_stem in {f"test_{stem}", f"{stem}_test"}:
+                scores[candidate] = max(scores.get(candidate, 0), source_score * 0.24)
+                reason = f"test sibling for {source_path}"
+                if reason not in reasons.setdefault(candidate, []):
+                    reasons[candidate].append(reason)
+
+
+def _looks_like_test(path: str) -> bool:
+    normalized = path.lower().replace("\\", "/")
+    basename = normalized.rsplit("/", 1)[-1]
+    return normalized.startswith("tests/") or "/tests/" in normalized or basename.startswith("test_")
+
+
 def _path_matches(path: str, candidates: frozenset[str]) -> bool:
     if not candidates:
         return False
@@ -114,4 +144,3 @@ def _dedupe(items: list[str]) -> list[str]:
             result.append(item)
             seen.add(item)
     return result
-

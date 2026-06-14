@@ -54,6 +54,25 @@ def test_pack_outputs_are_stable(tmp_path):
     assert payload[0]["path"] == "lib/cache.py"
 
 
+def test_ranking_includes_test_sibling_for_selected_source(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "src" / "checkout.py").write_text(
+        "def apply_coupon(code):\n    return code.strip()\n",
+        encoding="utf-8",
+    )
+    (repo / "tests" / "test_checkout.py").write_text(
+        "def test_coupon_whitespace():\n    pass\n",
+        encoding="utf-8",
+    )
+
+    ranked = rank_files(repo, issue_text="apply_coupon should reject blank coupons", top=4)
+
+    sibling = next(item for item in ranked if item.path == "tests/test_checkout.py")
+    assert "test sibling for src/checkout.py" in sibling.reasons
+
+
 def test_cli_scan_writes_json(tmp_path):
     repo = tmp_path / "repo"
     (repo / "core").mkdir(parents=True)

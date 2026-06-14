@@ -55,6 +55,7 @@ unrelated files. PatchContext keeps the first pass focused:
 - extract paths from issue text, stack traces, and diffs;
 - rank files by path and content signals;
 - add light import-neighbor context for Python and JS/TS;
+- pull in likely test siblings for selected source files;
 - output a Markdown or JSON artifact that can be pasted into Codex, Claude Code, ChatGPT, or
   a PR debugging note.
 
